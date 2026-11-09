@@ -1,0 +1,11 @@
+product_id,product_name,category,sub_category,cost_price,retail_price,supplier_id,lead_time_days,lead_time_std_days,minimum_order_qty,pack_size,shelf_life_days,storage_type
+SKU_BEV_01,Sparkling Citrus Soda 2L,Beverages,Carbonated Drinks,1.2,2.49,SUPP_BEV_CORP,3,0.5,24,12,180,Ambient
+SKU_DAIRY_02,Organic Whole Milk 1 Gallon,Dairy & Chilled,Fresh Milk,2.8,4.59,SUPP_VALLEY_FARM,2,0.3,10,4,14,Cold
+SKU_ELEC_03,Wireless Noise-Cancelling Headphones,Electronics,Audio,55.0,99.99,SUPP_TECH_IMPORT,14,2.0,5,1,720,Ambient
+SKU_GROC_04,Royal Himalayan Basmati Rice 5kg,Pantry Staples,Grains & Rice,8.5,14.99,SUPP_GLOBAL_GRAIN,7,1.2,20,4,365,Ambient
+SKU_APP_05,Thermal Fleece Winter Jacket,Apparel,Outerwear,28.0,59.99,SUPP_NORDIC_WEAR,21,3.5,15,5,999,Ambient
+SKU_SNK_06,Crispy Kettle Potato Chips 200g,Snacks,Chips & Crisps,1.1,2.29,SUPP_SNACK_VENTURES,4,0.8,36,12,120,Ambient
+SKU_PC_07,Gentle Hydrating Shampoo 500ml,Personal Care,Hair Care,3.4,6.99,SUPP_PURE_BEAUTY,6,1.0,12,6,540,Ambient
+SKU_BAK_08,Rustic Sourdough Artisan Loaf,Bakery,Fresh Breads,1.5,3.99,SUPP_LOCAL_OVEN,1,0.2,8,2,4,Ambient
+SKU_HOME_09,Tri-Ply Stainless Steel Fry Pan 10-Inch,Home & Kitchen,Cookware,24.0,49.99,SUPP_CHEF_GEAR,10,1.5,6,2,999,Bulk
+SKU_TOOL_10,18V Cordless Compact Drill Kit,Hardware & Tools,Power Tools,42.0,79.99,SUPP_PRO_BUILD,12,2.0,4,1,999,Bulk
