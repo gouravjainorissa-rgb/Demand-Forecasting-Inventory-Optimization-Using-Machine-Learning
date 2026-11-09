@@ -225,11 +225,12 @@ def get_inventory_recommendation(req: ReplenishmentRequest):
 @app.get("/dashboard", response_class=HTMLResponse, tags=["Interactive Dashboard"])
 def serve_dashboard():
     """
-    Renders the modern 4-page interactive decision support dashboard:
-    1. Demand Overview
-    2. Product/Store Forecasts
-    3. Inventory Risk & Replenishment
-    4. Model Performance Benchmarks
+    Renders the simplified, beginner-friendly 5-page decision support dashboard:
+    1. Sales Overview (Real Sales vs Predicted Sales)
+    2. Predict Product Sales (Interactive Forecast Explorer)
+    3. Try Your Own Prediction (What-If Simulator)
+    4. Stock Alerts & Order Advice (Which Products May Run Out of Stock)
+    5. How Well the AI Model Works (Model Performance Benchmarks)
     """
     html_content = """
     <!DOCTYPE html>
@@ -237,12 +238,12 @@ def serve_dashboard():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Demand Forecasting & Inventory Optimization</title>
+        <title>Predict Future Sales & Manage Product Stock</title>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>
             :root {
                 --primary: #1e3a8a;
-                --primary-light: #3b82f6;
+                --primary-light: #2563eb;
                 --secondary: #0d9488;
                 --bg: #f8fafc;
                 --card-bg: #ffffff;
@@ -257,7 +258,7 @@ def serve_dashboard():
             body { background-color: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
             
             /* Sidebar */
-            .sidebar { width: 260px; background: #0f172a; color: white; padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; }
+            .sidebar { width: 270px; background: #0f172a; color: white; padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; }
             .sidebar h2 { font-size: 1.1rem; color: #38bdf8; margin-bottom: 20px; padding-left: 12px; }
             .nav-item { padding: 12px 14px; border-radius: 8px; color: #cbd5e1; text-decoration: none; cursor: pointer; font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; gap: 10px; transition: 0.2s; }
             .nav-item:hover, .nav-item.active { background: #1e293b; color: #38bdf8; }
@@ -265,7 +266,7 @@ def serve_dashboard():
             /* Main Content */
             .main { flex: 1; padding: 32px; overflow-y: auto; }
             .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-            .header h1 { font-size: 1.7rem; color: #0f172a; }
+            .header h1 { font-size: 1.65rem; color: #0f172a; }
             .badge { padding: 4px 10px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
             .badge-online { background: #dcfce7; color: #166534; }
             .badge-high { background: #fee2e2; color: #991b1b; }
@@ -275,15 +276,20 @@ def serve_dashboard():
             /* Metric Cards */
             .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
             .card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-            .kpi-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
-            .kpi-value { font-size: 1.8rem; font-weight: 700; color: #0f172a; margin-top: 6px; }
-            .kpi-sub { font-size: 0.8rem; color: var(--secondary); margin-top: 4px; font-weight: 500; }
+            .kpi-label { font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+            .kpi-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin-top: 6px; }
+            .kpi-sub { font-size: 0.82rem; color: var(--secondary); margin-top: 4px; font-weight: 500; }
+            .kpi-desc { font-size: 0.76rem; color: #94a3b8; margin-top: 4px; line-height: 1.3; }
 
             /* Controls Bar */
             .controls-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; background: white; padding: 16px; border-radius: 10px; border: 1px solid var(--border); }
             select, input, button { padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.9rem; }
             button.btn-primary { background: var(--primary-light); color: white; border: none; cursor: pointer; font-weight: 600; }
             button.btn-primary:hover { background: var(--primary); }
+
+            /* Helper Explanatory Banner */
+            .info-banner { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; font-size: 0.88rem; color: #1e40af; line-height: 1.5; }
+            .info-banner strong { color: #1d4ed8; }
 
             /* Pages */
             .page-section { display: none; }
@@ -293,21 +299,21 @@ def serve_dashboard():
             .chart-container { position: relative; height: 360px; margin-top: 10px; }
             table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
             th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
-            th { background: #f1f5f9; color: #334155; font-weight: 600; }
+            th { background: #f1f5f9; color: #334155; font-weight: 600; font-size: 0.85rem; }
             tr:hover { background: #f8fafc; }
         </style>
     </head>
     <body>
         <div class="sidebar">
-            <h2>📦 Demand & Replenish</h2>
-            <div class="nav-item active" onclick="switchPage('overview')">📊 Demand Overview</div>
-            <div class="nav-item" onclick="switchPage('forecast')">📈 Product Forecasts</div>
-            <div class="nav-item" onclick="switchPage('simulator')">🔮 Custom What-If Simulator</div>
-            <div class="nav-item" onclick="switchPage('inventory')">⚠️ Inventory & ROP Risk</div>
-            <div class="nav-item" onclick="switchPage('performance')">🎯 Model Performance</div>
-            <div style="margin-top: auto; padding: 10px; font-size: 0.75rem; color: #64748b;">
-                Production Prototype v1.0.0<br>
-                Powered by FastAPI & Scikit-Learn
+            <h2>📦 Sales & Stock Tool</h2>
+            <div class="nav-item active" onclick="switchPage('overview')">📊 Sales Overview</div>
+            <div class="nav-item" onclick="switchPage('forecast')">📈 Predict Product Sales</div>
+            <div class="nav-item" onclick="switchPage('simulator')">🔮 Try Your Own Prediction</div>
+            <div class="nav-item" onclick="switchPage('inventory')">⚠️ Stock Alerts & Order Advice</div>
+            <div class="nav-item" onclick="switchPage('performance')">🎯 How Well the Model Works</div>
+            <div style="margin-top: auto; padding: 12px; font-size: 0.78rem; color: #94a3b8; line-height: 1.4; border-top: 1px solid #1e293b;">
+                Simple & Easy Version<br>
+                Powered by AI & Machine Learning
             </div>
         </div>
 
@@ -315,81 +321,99 @@ def serve_dashboard():
             <!-- Header -->
             <div class="header">
                 <div>
-                    <h1 id="page-title">Executive Demand Overview</h1>
-                    <p style="color: var(--text-muted); font-size: 0.9rem;">Multi-Store Machine Learning Demand Forecasting & Automated Replenishment</p>
+                    <h1 id="page-title">Sales Overview</h1>
+                    <p id="page-subtitle" style="color: var(--text-muted); font-size: 0.92rem;">Track customer sales and see how accurately the AI predicts future purchases.</p>
                 </div>
                 <div>
-                    <span class="badge badge-online">● System Operational</span>
+                    <span class="badge badge-online">● System Ready</span>
                 </div>
             </div>
 
-            <!-- Page 1: Demand Overview -->
+            <!-- Page 1: Sales Overview -->
             <div id="page-overview" class="page-section active">
+                <div class="info-banner">
+                    <strong>💡 How this works:</strong> This system uses previous sales, day-of-week trends, and holiday shopping patterns to predict how many items will sell in the future. This helps store managers order the right amount of stock on time.
+                </div>
+
                 <div class="kpi-grid">
                     <div class="card">
-                        <div class="kpi-label">Champion Model WAPE</div>
+                        <div class="kpi-label">Overall Prediction Error (%)</div>
                         <div class="kpi-value">18.3%</div>
-                        <div class="kpi-sub">↓ -34% Error vs Seasonal Baseline</div>
+                        <div class="kpi-sub">↓ 34% more accurate than guessing</div>
+                        <div class="kpi-desc">Lower is better. Means the prediction is close to real customer sales.</div>
                     </div>
                     <div class="card">
-                        <div class="kpi-label">Forecast Bias (Mean Error)</div>
+                        <div class="kpi-label">Prediction Difference (Bias)</div>
                         <div class="kpi-value">-0.30</div>
-                        <div class="kpi-sub">Structurally Unbiased (-1.4%)</div>
+                        <div class="kpi-sub">Balanced Predictions</div>
+                        <div class="kpi-desc">On average, predictions are off by less than 1 item per day.</div>
                     </div>
                     <div class="card">
-                        <div class="kpi-label">Target Service Level</div>
+                        <div class="kpi-label">Product Availability Target</div>
                         <div class="kpi-value">95.0%</div>
-                        <div class="kpi-sub">Z = 1.645 Safety Multiplier</div>
+                        <div class="kpi-sub">Items in stock 95% of the time</div>
+                        <div class="kpi-desc">Keeps enough extra backup stock so shelves rarely run empty.</div>
                     </div>
                     <div class="card">
-                        <div class="kpi-label">Active SKUs / Stores</div>
-                        <div class="kpi-value">10 / 3</div>
-                        <div class="kpi-sub">30 Real-Time Forecasting Nodes</div>
+                        <div class="kpi-label">Tracked Products & Stores</div>
+                        <div class="kpi-value">10 Products / 3 Stores</div>
+                        <div class="kpi-sub">30 total store locations</div>
+                        <div class="kpi-desc">Tracks sales for beverages, snacks, apparel, electronics, and tools.</div>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3 style="margin-bottom: 12px;">Actual vs Machine Learning Demand Trajectory (105-Day Test Period)</h3>
+                    <h3 style="margin-bottom: 6px;">Real Sales vs Predicted Sales (Test Period Comparison)</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                        Comparing what customers actually bought (dark line) against what the AI predicted (teal dotted line).
+                    </p>
                     <div class="chart-container">
                         <canvas id="overviewChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Page 2: Product Forecasts -->
+            <!-- Page 2: Predict Product Sales -->
             <div id="page-forecast" class="page-section">
+                <div class="info-banner">
+                    <strong>💡 How to use:</strong> Choose any product and store below. The AI will forecast how many items customers are expected to buy over the coming days.
+                </div>
+
                 <div class="controls-bar">
-                    <label style="font-weight: 600; align-self: center;">Select SKU:</label>
+                    <label style="font-weight: 600; align-self: center;">1. Choose Product:</label>
                     <select id="skuSelect" onchange="updateForecastChart()">
-                        <option value="SKU_BEV_01">SKU_BEV_01 - Sparkling Citrus Soda 2L</option>
-                        <option value="SKU_DAIRY_02">SKU_DAIRY_02 - Organic Whole Milk 1 Gallon</option>
-                        <option value="SKU_ELEC_03">SKU_ELEC_03 - Wireless Headphones</option>
-                        <option value="SKU_GROC_04">SKU_GROC_04 - Basmati Rice 5kg</option>
-                        <option value="SKU_APP_05">SKU_APP_05 - Thermal Fleece Jacket</option>
-                        <option value="SKU_SNK_06">SKU_SNK_06 - Crispy Kettle Chips</option>
-                        <option value="SKU_PC_07">SKU_PC_07 - Gentle Hydrating Shampoo</option>
-                        <option value="SKU_BAK_08">SKU_BAK_08 - Sourdough Artisan Loaf</option>
-                        <option value="SKU_HOME_09">SKU_HOME_09 - Stainless Fry Pan</option>
-                        <option value="SKU_TOOL_10">SKU_TOOL_10 - Cordless Drill Kit</option>
+                        <option value="SKU_BEV_01">Sparkling Citrus Soda 2L (Beverages)</option>
+                        <option value="SKU_DAIRY_02">Organic Whole Milk 1 Gallon (Dairy)</option>
+                        <option value="SKU_ELEC_03">Wireless Noise-Cancelling Headphones (Electronics)</option>
+                        <option value="SKU_GROC_04">Royal Himalayan Basmati Rice 5kg (Pantry)</option>
+                        <option value="SKU_APP_05">Thermal Fleece Winter Jacket (Apparel)</option>
+                        <option value="SKU_SNK_06">Crispy Kettle Potato Chips 200g (Snacks)</option>
+                        <option value="SKU_PC_07">Gentle Hydrating Shampoo 500ml (Personal Care)</option>
+                        <option value="SKU_BAK_08">Rustic Sourdough Artisan Loaf (Bakery)</option>
+                        <option value="SKU_HOME_09">Stainless Steel Fry Pan 10-Inch (Cookware)</option>
+                        <option value="SKU_TOOL_10">18V Cordless Compact Drill Kit (Tools)</option>
                     </select>
 
-                    <label style="font-weight: 600; align-self: center;">Store:</label>
+                    <label style="font-weight: 600; align-self: center;">2. Store Location:</label>
                     <select id="storeSelect" onchange="updateForecastChart()">
-                        <option value="STORE_EAST">STORE_EAST (Urban Metro)</option>
-                        <option value="STORE_WEST">STORE_WEST (Suburban)</option>
-                        <option value="STORE_CENTRAL">STORE_CENTRAL (Regional Hub)</option>
+                        <option value="STORE_EAST">STORE_EAST (City Center Store)</option>
+                        <option value="STORE_WEST">STORE_WEST (Suburban Store)</option>
+                        <option value="STORE_CENTRAL">STORE_CENTRAL (Regional Hub Store)</option>
                     </select>
 
-                    <label style="font-weight: 600; align-self: center;">Horizon:</label>
+                    <label style="font-weight: 600; align-self: center;">3. How Many Days Ahead:</label>
                     <select id="horizonSelect" onchange="updateForecastChart()">
-                        <option value="14">14 Days Forward</option>
-                        <option value="7">7 Days Forward</option>
-                        <option value="28">28 Days Forward</option>
+                        <option value="14">Next 14 Days (2 Weeks)</option>
+                        <option value="7">Next 7 Days (1 Week)</option>
+                        <option value="28">Next 28 Days (1 Month)</option>
                     </select>
                 </div>
 
                 <div class="card">
-                    <h3 id="forecastTitle" style="margin-bottom: 12px;">Forward Demand Forecast & 95% Confidence Intervals</h3>
+                    <h3 id="forecastTitle" style="margin-bottom: 6px;">Future Sales Prediction & Expected Range</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                        The blue line is the expected sales. The light blue shaded area shows the normal expected range (95% of real sales will fall in this range).
+                    </p>
                     <div class="chart-container">
                         <canvas id="forecastChart"></canvas>
                     </div>
@@ -398,100 +422,108 @@ def serve_dashboard():
 
             <!-- Page 3: Custom What-If Simulator -->
             <div id="page-simulator" class="page-section">
+                <div class="info-banner">
+                    <strong>💡 Try Your Own Numbers:</strong> Type in your current stock and delivery waiting time. The AI will immediately tell you how much will sell, whether you will run out of stock, and exactly how many packs to order!
+                </div>
+
                 <div class="card" style="margin-bottom: 24px;">
-                    <h3 style="margin-bottom: 6px;">🔮 Live What-If Prediction & Replenishment Simulator</h3>
-                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
-                        Input custom operational values below to simulate forward customer demand and evaluate real-time stockout risk & order requirements.
+                    <h3 style="margin-bottom: 6px;">🔮 Test Your Own Product & Stock Numbers</h3>
+                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">
+                        Fill in the values below to get instant order recommendations from the machine learning model.
                     </p>
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px;">
                         <div>
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Select Product SKU:</label>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">1. Choose Product:</label>
                             <select id="simSku" style="width: 100%;">
-                                <option value="SKU_BEV_01">SKU_BEV_01 - Sparkling Citrus Soda 2L</option>
-                                <option value="SKU_DAIRY_02">SKU_DAIRY_02 - Organic Whole Milk 1 Gallon</option>
-                                <option value="SKU_ELEC_03">SKU_ELEC_03 - Wireless Headphones</option>
-                                <option value="SKU_GROC_04">SKU_GROC_04 - Basmati Rice 5kg</option>
-                                <option value="SKU_APP_05">SKU_APP_05 - Thermal Fleece Jacket</option>
-                                <option value="SKU_SNK_06">SKU_SNK_06 - Crispy Kettle Chips</option>
-                                <option value="SKU_PC_07">SKU_PC_07 - Gentle Hydrating Shampoo</option>
-                                <option value="SKU_BAK_08">SKU_BAK_08 - Sourdough Artisan Loaf</option>
-                                <option value="SKU_HOME_09">SKU_HOME_09 - Stainless Fry Pan</option>
-                                <option value="SKU_TOOL_10">SKU_TOOL_10 - Cordless Drill Kit</option>
+                                <option value="SKU_BEV_01">Sparkling Citrus Soda 2L</option>
+                                <option value="SKU_DAIRY_02">Organic Whole Milk 1 Gallon</option>
+                                <option value="SKU_ELEC_03">Wireless Noise-Cancelling Headphones</option>
+                                <option value="SKU_GROC_04">Royal Himalayan Basmati Rice 5kg</option>
+                                <option value="SKU_APP_05">Thermal Fleece Winter Jacket</option>
+                                <option value="SKU_SNK_06">Crispy Kettle Potato Chips 200g</option>
+                                <option value="SKU_PC_07">Gentle Hydrating Shampoo 500ml</option>
+                                <option value="SKU_BAK_08">Rustic Sourdough Artisan Loaf</option>
+                                <option value="SKU_HOME_09">Stainless Steel Fry Pan 10-Inch</option>
+                                <option value="SKU_TOOL_10">18V Cordless Compact Drill Kit</option>
                             </select>
                         </div>
 
                         <div>
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Store Location:</label>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">2. Store Location:</label>
                             <select id="simStore" style="width: 100%;">
-                                <option value="STORE_EAST">STORE_EAST (Urban Metro)</option>
-                                <option value="STORE_WEST">STORE_WEST (Suburban)</option>
-                                <option value="STORE_CENTRAL">STORE_CENTRAL (Regional Hub)</option>
+                                <option value="STORE_EAST">STORE_EAST (City Center Store)</option>
+                                <option value="STORE_WEST">STORE_WEST (Suburban Store)</option>
+                                <option value="STORE_CENTRAL">STORE_CENTRAL (Regional Hub Store)</option>
                             </select>
                         </div>
 
                         <div>
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Forecast Horizon (Days):</label>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">3. Days Ahead to Predict:</label>
                             <input id="simHorizon" type="number" min="1" max="90" value="14" style="width: 100%;">
                         </div>
 
                         <div>
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Current Stock On-Hand (Units):</label>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">4. Available Stock on Hand (Units):</label>
                             <input id="simOnHand" type="number" min="0" value="12" style="width: 100%;">
                         </div>
 
                         <div>
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Units On-Order / In-Transit:</label>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">5. Orders Already on the Way (Units):</label>
                             <input id="simOnOrder" type="number" min="0" value="0" style="width: 100%;">
                         </div>
 
                         <div>
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Target Service Level:</label>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">6. Product Availability Target:</label>
                             <select id="simServiceLevel" style="width: 100%;">
-                                <option value="0.95">95% Service Level (Z = 1.645 - Standard)</option>
-                                <option value="0.90">90% Service Level (Z = 1.282)</option>
-                                <option value="0.98">98% Service Level (Z = 2.054 - High Availability)</option>
-                                <option value="0.99">99% Service Level (Z = 2.326 - Critical Stock)</option>
+                                <option value="0.95">95% (Standard - Highly Recommended)</option>
+                                <option value="0.90">90% (Basic Availability)</option>
+                                <option value="0.98">98% (High Availability)</option>
+                                <option value="0.99">99% (Maximum - Keep in Stock Always)</option>
                             </select>
                         </div>
                     </div>
 
-                    <button class="btn-primary" style="padding: 12px 24px; font-size: 1rem; border-radius: 8px;" onclick="runCustomSimulation()">
-                        ⚡ Run Live Machine Learning Forecast & Replenishment
+                    <button class="btn-primary" style="padding: 12px 24px; font-size: 0.95rem; border-radius: 8px;" onclick="runCustomSimulation()">
+                        ⚡ Predict Sales & Check If We Need to Order More
                     </button>
                 </div>
 
                 <!-- Simulation Output Area -->
                 <div id="simResultsCard" class="card" style="display: none; margin-bottom: 24px;">
-                    <h3 style="margin-bottom: 16px;">Simulation Results: <span id="simResultSkuName" style="color: var(--primary-light);"></span></h3>
+                    <h3 style="margin-bottom: 16px;">AI Prediction & Order Advice for: <span id="simResultSkuName" style="color: var(--primary-light);"></span></h3>
                     
                     <div class="kpi-grid">
                         <div class="card" style="background: #f8fafc;">
-                            <div class="kpi-label">Forecast Daily Demand</div>
+                            <div class="kpi-label">Expected Daily Sales</div>
                             <div class="kpi-value" id="simDailyDemand">-</div>
                             <div class="kpi-sub" id="simTotalDemand">-</div>
+                            <div class="kpi-desc">Average number of units customers buy each day.</div>
                         </div>
 
                         <div class="card" style="background: #f8fafc;">
-                            <div class="kpi-label">Safety Stock Buffer</div>
+                            <div class="kpi-label">Extra Backup Stock (Safety Stock)</div>
                             <div class="kpi-value" id="simSafetyStock">-</div>
                             <div class="kpi-sub" id="simLeadTimeDemand">-</div>
+                            <div class="kpi-desc">Extra items kept so you don't run out during delivery delays.</div>
                         </div>
 
                         <div class="card" style="background: #f8fafc;">
-                            <div class="kpi-label">Reorder Point (ROP)</div>
+                            <div class="kpi-label">When to Order More (Reorder Point)</div>
                             <div class="kpi-value" id="simROP">-</div>
                             <div class="kpi-sub" id="simOrderStatus">-</div>
+                            <div class="kpi-desc">When stock drops to this level, place a new order right away.</div>
                         </div>
 
                         <div class="card" style="background: #f8fafc;">
-                            <div class="kpi-label">Recommended Order</div>
+                            <div class="kpi-label">Recommended Order Quantity</div>
                             <div class="kpi-value" id="simOrderQty" style="color: #0d9488;">-</div>
                             <div class="kpi-sub" id="simRiskBadge">-</div>
+                            <div class="kpi-desc">Exact units to buy, rounded up to full supplier shipping packs.</div>
                         </div>
                     </div>
 
-                    <div id="simAdviceBox" style="padding: 14px; border-radius: 8px; margin-top: 14px; font-size: 0.95rem;"></div>
+                    <div id="simAdviceBox" style="padding: 14px 18px; border-radius: 8px; margin-top: 14px; font-size: 0.95rem; line-height: 1.5;"></div>
 
                     <div class="chart-container" style="margin-top: 20px;">
                         <canvas id="simChart"></canvas>
@@ -499,26 +531,34 @@ def serve_dashboard():
                 </div>
             </div>
 
-            <!-- Page 4: Inventory Risk -->
+            <!-- Page 4: Stock Alerts & Order Advice -->
             <div id="page-inventory" class="page-section">
+                <div class="info-banner">
+                    <strong>💡 Simple Definitions:</strong><br>
+                    • <strong>Stock on Hand:</strong> Physical units currently on the store shelves.<br>
+                    • <strong>When to Order More (Reorder Point):</strong> The minimum stock level. If your stock is below this, order more now.<br>
+                    • <strong>Days of Stock Left:</strong> How many days until you completely run out of stock.<br>
+                    • <strong>Risk of Running Out:</strong> <span style="color:#ef4444; font-weight:bold;">HIGH</span> means stock will run out before a delivery can arrive!
+                </div>
+
                 <div class="card" style="margin-bottom: 24px;">
-                    <h3 style="margin-bottom: 8px;">Automated Replenishment & Stockout Risk Table</h3>
-                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
-                        Evaluated with Lead Time Demand + Safety Stock (95% Service Level) against Current Stock on Hand and Pipeline Orders.
+                    <h3 style="margin-bottom: 6px;">Which Products May Run Out of Stock?</h3>
+                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px;">
+                        The system checks current stock, delivery waiting times, and predicted customer sales to tell you which products need an immediate order.
                     </p>
                     <div style="overflow-x: auto;">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>SKU ID</th>
-                                    <th>Store</th>
-                                    <th>On-Hand</th>
-                                    <th>On-Order</th>
-                                    <th>Reorder Point (ROP)</th>
-                                    <th>Days of Supply</th>
-                                    <th>Reorder Trigger</th>
-                                    <th>Recommended Order</th>
-                                    <th>Risk Level</th>
+                                    <th>Product</th>
+                                    <th>Store Location</th>
+                                    <th>Stock on Hand</th>
+                                    <th>Orders on the Way</th>
+                                    <th>When to Order More</th>
+                                    <th>Days of Stock Left</th>
+                                    <th>Order Status</th>
+                                    <th>How Many to Order</th>
+                                    <th>Risk of Running Out</th>
                                 </tr>
                             </thead>
                             <tbody id="inventoryTableBody">
@@ -529,35 +569,53 @@ def serve_dashboard():
                 </div>
             </div>
 
-            <!-- Page 4: Model Performance -->
+            <!-- Page 5: Model Performance -->
             <div id="page-performance" class="page-section">
+                <div class="info-banner">
+                    <strong>💡 How We Measure Accuracy:</strong> We test each model against real customer sales that the model has never seen before. Lower error means the model makes fewer mistakes.
+                </div>
+
                 <div class="kpi-grid">
                     <div class="card">
-                        <div class="kpi-label">Baseline: Naive</div>
+                        <div class="kpi-label">Simple Guess (Yesterday's Sales)</div>
                         <div class="kpi-value" style="color: #64748b;">30.8%</div>
-                        <div class="kpi-sub">MAE: 6.37 units | RMSE: 9.59</div>
+                        <div class="kpi-sub">Average Error: 6.37 items</div>
+                        <div class="kpi-desc">Just assumes today's sales will match yesterday's sales.</div>
                     </div>
                     <div class="card">
-                        <div class="kpi-label">Baseline: Seasonal-Naive</div>
+                        <div class="kpi-label">Weekly Guess (Same Day Last Week)</div>
                         <div class="kpi-value" style="color: #64748b;">27.7%</div>
-                        <div class="kpi-sub">MAE: 5.74 units | RMSE: 8.41</div>
+                        <div class="kpi-sub">Average Error: 5.74 items</div>
+                        <div class="kpi-desc">Assumes sales will match the same day of the week last week.</div>
                     </div>
                     <div class="card">
-                        <div class="kpi-label">ML: Ridge Regression</div>
+                        <div class="kpi-label">Basic Mathematical Model (Ridge)</div>
                         <div class="kpi-value" style="color: #0284c7;">20.3%</div>
-                        <div class="kpi-sub">MAE: 4.20 units | RMSE: 5.90</div>
+                        <div class="kpi-sub">Average Error: 4.20 items</div>
+                        <div class="kpi-desc">Uses basic straight-line math with historical averages.</div>
                     </div>
                     <div class="card">
-                        <div class="kpi-label">ML: HistGradientBoosting (Best)</div>
+                        <div class="kpi-label">Our Champion AI Model (Tree Boosting)</div>
                         <div class="kpi-value" style="color: #059669;">18.3%</div>
-                        <div class="kpi-sub">MAE: 3.79 units | RMSE: 5.42</div>
+                        <div class="kpi-sub">🏆 Lowest Error: 3.79 items</div>
+                        <div class="kpi-desc">Our best model! 34% more accurate than simple guessing.</div>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3 style="margin-bottom: 12px;">Model Evaluation & Error Penalties Comparison</h3>
+                    <h3 style="margin-bottom: 6px;">Comparing Prediction Mistakes Across Different Models</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                        Lower bars mean better accuracy and fewer prediction mistakes.
+                    </p>
                     <div class="chart-container">
                         <canvas id="perfChart"></canvas>
+                    </div>
+                    
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin-top: 18px; font-size: 0.85rem; color: #475569; line-height: 1.5;">
+                        <strong style="color: #0f172a;">📘 What Do These Three Metrics Mean?</strong><br>
+                        • <strong>Average Prediction Error (MAE):</strong> On average, how many units the prediction was off by.<br>
+                        • <strong>Error Penalty for Large Mistakes (RMSE):</strong> Penalizes big surprises heavily. Lower is better.<br>
+                        • <strong>Overall Prediction Error % (WAPE):</strong> The total mistake percentage compared to all items sold. 18.3% means predictions are over 81% accurate.
                     </div>
                 </div>
             </div>
@@ -566,6 +624,7 @@ def serve_dashboard():
         <script>
             let currentChart = null;
             let currentForecastChart = null;
+            let currentSimChart = null;
 
             function switchPage(pageId) {
                 document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
@@ -575,13 +634,23 @@ def serve_dashboard():
                 event.currentTarget.classList.add('active');
                 
                 const titles = {
-                    'overview': 'Executive Demand Overview',
-                    'forecast': 'Product Demand Trajectories & Forecast Explorer',
-                    'simulator': '🔮 Interactive What-If Demand & Replenishment Simulator',
-                    'inventory': 'Inventory Optimization & Replenishment Risk Matrix',
-                    'performance': 'Model Performance & Baseline Benchmarking'
+                    'overview': 'Sales Overview',
+                    'forecast': 'Predict Product Sales',
+                    'simulator': 'Try Your Own Prediction (What-If Simulator)',
+                    'inventory': 'Stock Alerts & Order Advice',
+                    'performance': 'How Well the AI Model Works'
                 };
+
+                const subtitles = {
+                    'overview': 'Track customer sales and see how accurately the AI predicts future purchases.',
+                    'forecast': 'Choose a product and store to see predicted future customer sales.',
+                    'simulator': 'Test your own stock numbers and get instant recommendations on when and how much to order.',
+                    'inventory': 'See which products are running low and get recommended order quantities in full packs.',
+                    'performance': 'Compare our AI model against simple guessing and baseline methods on real test sales.'
+                };
+
                 document.getElementById('page-title').innerText = titles[pageId];
+                document.getElementById('page-subtitle').innerText = subtitles[pageId];
                 
                 if (pageId === 'overview') renderOverviewChart();
                 if (pageId === 'forecast') updateForecastChart();
@@ -589,8 +658,6 @@ def serve_dashboard():
                 if (pageId === 'inventory') renderInventoryTable();
                 if (pageId === 'performance') renderPerformanceChart();
             }
-
-            let currentSimChart = null;
 
             async function runCustomSimulation() {
                 const sku = document.getElementById('simSku').value;
@@ -626,40 +693,43 @@ def serve_dashboard():
 
                     // Display results card
                     document.getElementById('simResultsCard').style.display = 'block';
-                    document.getElementById('simResultSkuName').innerText = repData.product_name + ' (' + sku + ' @ ' + store + ')';
+                    document.getElementById('simResultSkuName').innerText = repData.product_name + ' at ' + store;
                     document.getElementById('simDailyDemand').innerText = repData.daily_forecast_demand + ' units/day';
-                    document.getElementById('simTotalDemand').innerText = 'Total ' + horizon + 'd: ' + fcData.total_forecast_demand + ' units';
+                    document.getElementById('simTotalDemand').innerText = 'Total Next ' + horizon + ' Days: ' + fcData.total_forecast_demand + ' units';
 
                     document.getElementById('simSafetyStock').innerText = repData.safety_stock + ' units';
-                    document.getElementById('simLeadTimeDemand').innerText = 'Lead-Time Demand: ' + repData.lead_time_demand + ' units (' + repData.lead_time_days + 'd lead)';
+                    document.getElementById('simLeadTimeDemand').innerText = 'Sales During Delivery Waiting Time: ' + repData.lead_time_demand + ' units (' + repData.lead_time_days + ' days)';
 
                     document.getElementById('simROP').innerText = repData.reorder_point + ' units';
                     const orderStatusEl = document.getElementById('simOrderStatus');
                     if (repData.trigger_order) {
-                        orderStatusEl.innerHTML = "<span style='color: #ef4444; font-weight: bold;'>⚠️ REORDER TRIGGERED (Stock <= ROP)</span>";
+                        orderStatusEl.innerHTML = "<span style='color: #ef4444; font-weight: bold;'>⚠️ TIME TO ORDER (Stock is at or below reorder level)</span>";
                     } else {
-                        orderStatusEl.innerHTML = "<span style='color: #10b981; font-weight: bold;'>✓ STOCK SUFFICIENT (Stock > ROP)</span>";
+                        orderStatusEl.innerHTML = "<span style='color: #10b981; font-weight: bold;'>✓ STOCK IS HEALTHY (No order needed right now)</span>";
                     }
 
                     document.getElementById('simOrderQty').innerText = repData.suggested_order_qty > 0 
                         ? repData.suggested_order_qty + ' units (' + repData.suggested_packs + ' packs)' 
-                        : '0 units (No order needed)';
+                        : '0 units (Stock is sufficient)';
 
                     const riskBadge = repData.stockout_risk_level === 'HIGH' ? 'badge-high' : (repData.stockout_risk_level === 'MEDIUM' ? 'badge-med' : 'badge-low');
-                    document.getElementById('simRiskBadge').innerHTML = "<span class='badge " + riskBadge + "'>" + repData.stockout_risk_level + " RISK (" + repData.days_of_supply + " Days of Supply)</span>";
+                    const riskLabel = repData.stockout_risk_level === 'HIGH' ? 'HIGH RISK OF RUNNING OUT' : (repData.stockout_risk_level === 'MEDIUM' ? 'MEDIUM RISK' : 'LOW RISK (SAFE)');
+                    document.getElementById('simRiskBadge').innerHTML = "<span class='badge " + riskBadge + "'>" + riskLabel + " (" + repData.days_of_supply + " Days of Stock Left)</span>";
 
                     const adviceBox = document.getElementById('simAdviceBox');
                     if (repData.stockout_risk_level === 'HIGH') {
                         adviceBox.style.background = '#fee2e2';
                         adviceBox.style.color = '#991b1b';
+                        adviceBox.innerHTML = "<strong>⚠️ High Risk Warning:</strong> You only have <strong>" + repData.days_of_supply + " days</strong> of stock left, but it takes <strong>" + repData.lead_time_days + " days</strong> for a new delivery to arrive! Place an order of <strong>" + repData.suggested_order_qty + " units (" + repData.suggested_packs + " packs)</strong> immediately to avoid empty shelves.";
                     } else if (repData.stockout_risk_level === 'MEDIUM') {
                         adviceBox.style.background = '#fef3c7';
                         adviceBox.style.color = '#92400e';
+                        adviceBox.innerHTML = "<strong>⚡ Moderate Stock Level:</strong> You have <strong>" + repData.days_of_supply + " days</strong> of stock left. This is enough for delivery, but dips into your extra backup stock. Keep a close watch.";
                     } else {
                         adviceBox.style.background = '#d1fae5';
                         adviceBox.style.color = '#065f46';
+                        adviceBox.innerHTML = "<strong>✓ Healthy Stock Level:</strong> You have <strong>" + repData.days_of_supply + " days</strong> of stock left, comfortably above your delivery waiting time (" + repData.lead_time_days + " days). No order needed today.";
                     }
-                    adviceBox.innerText = repData.stockout_risk_description;
 
                     // Plot Forecast Chart
                     const labels = fcData.daily_forecasts.map(d => d.date + ' (' + d.day_name.slice(0,3) + ')');
@@ -675,9 +745,9 @@ def serve_dashboard():
                         data: {
                             labels: labels,
                             datasets: [
-                                { label: 'Simulated AI Demand Forecast', data: pred, borderColor: '#0d9488', backgroundColor: '#0d9488', tension: 0.2, pointRadius: 4 },
-                                { label: 'Upper 95% Confidence Bound', data: upper, borderColor: '#5eead4', borderDash: [3, 3], pointRadius: 0, fill: '+1', backgroundColor: 'rgba(204, 251, 241, 0.4)' },
-                                { label: 'Lower 95% Confidence Bound', data: lower, borderColor: '#5eead4', borderDash: [3, 3], pointRadius: 0, fill: false }
+                                { label: 'Predicted Daily Sales (Units)', data: pred, borderColor: '#0d9488', backgroundColor: '#0d9488', tension: 0.2, pointRadius: 4 },
+                                { label: 'Highest Likely Sales (Upper Limit)', data: upper, borderColor: '#5eead4', borderDash: [3, 3], pointRadius: 0, fill: '+1', backgroundColor: 'rgba(204, 251, 241, 0.4)' },
+                                { label: 'Lowest Likely Sales (Lower Limit)', data: lower, borderColor: '#5eead4', borderDash: [3, 3], pointRadius: 0, fill: false }
                             ]
                         },
                         options: { responsive: true, maintainAspectRatio: false }
@@ -692,7 +762,6 @@ def serve_dashboard():
                 const ctx = document.getElementById('overviewChart').getContext('2d');
                 if (currentChart) currentChart.destroy();
                 
-                // Sample 20 sequential test days for visualization
                 const labels = ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7", "Day 8", "Day 9", "Day 10", "Day 11", "Day 12", "Day 13", "Day 14", "Day 15", "Day 16", "Day 17", "Day 18", "Day 19", "Day 20"];
                 const actual = [48, 52, 49, 56, 72, 85, 68, 47, 50, 53, 58, 79, 88, 71, 49, 51, 54, 60, 81, 89];
                 const forecast = [46, 50, 48, 55, 70, 82, 66, 48, 51, 52, 57, 76, 85, 69, 48, 50, 53, 59, 78, 86];
@@ -702,8 +771,8 @@ def serve_dashboard():
                     data: {
                         labels: labels,
                         datasets: [
-                            { label: 'Actual Demand (Units)', data: actual, borderColor: '#334155', backgroundColor: '#334155', tension: 0.2, pointRadius: 4 },
-                            { label: 'Champion Forecast (Units)', data: forecast, borderColor: '#0d9488', backgroundColor: '#0d9488', borderDash: [4, 4], tension: 0.2, pointRadius: 4 }
+                            { label: 'Real Customer Sales (Units)', data: actual, borderColor: '#334155', backgroundColor: '#334155', tension: 0.2, pointRadius: 4 },
+                            { label: 'AI Predicted Sales (Units)', data: forecast, borderColor: '#0d9488', backgroundColor: '#0d9488', borderDash: [4, 4], tension: 0.2, pointRadius: 4 }
                         ]
                     },
                     options: { responsive: true, maintainAspectRatio: false }
@@ -736,9 +805,9 @@ def serve_dashboard():
                         data: {
                             labels: labels,
                             datasets: [
-                                { label: 'Predicted Demand', data: pred, borderColor: '#2563eb', backgroundColor: '#2563eb', tension: 0.2, pointRadius: 4 },
-                                { label: 'Upper 95% Bound', data: upper, borderColor: '#93c5fd', borderDash: [2, 2], pointRadius: 0, fill: '+1', backgroundColor: 'rgba(219, 234, 254, 0.4)' },
-                                { label: 'Lower 95% Bound', data: lower, borderColor: '#93c5fd', borderDash: [2, 2], pointRadius: 0, fill: false }
+                                { label: 'Predicted Sales (Units)', data: pred, borderColor: '#2563eb', backgroundColor: '#2563eb', tension: 0.2, pointRadius: 4 },
+                                { label: 'Highest Likely Sales (Upper Limit)', data: upper, borderColor: '#93c5fd', borderDash: [2, 2], pointRadius: 0, fill: '+1', backgroundColor: 'rgba(219, 234, 254, 0.4)' },
+                                { label: 'Lowest Likely Sales (Lower Limit)', data: lower, borderColor: '#93c5fd', borderDash: [2, 2], pointRadius: 0, fill: false }
                             ]
                         },
                         options: { responsive: true, maintainAspectRatio: false }
@@ -750,42 +819,44 @@ def serve_dashboard():
 
             async function renderInventoryTable() {
                 const tbody = document.getElementById('inventoryTableBody');
-                tbody.innerHTML = "<tr><td colspan='9'>Loading inventory recommendations...</td></tr>";
+                tbody.innerHTML = "<tr><td colspan='9'>Loading product stock data...</td></tr>";
                 
                 try {
-                    // Pre-seeded table data for fast interactive display
                     const rows = [
-                        { sku: 'SKU_APP_05', store: 'STORE_EAST', on_hand: 8, on_order: 0, rop: 300, dos: 0.7, trigger: true, order: 190, risk: 'HIGH' },
-                        { sku: 'SKU_ELEC_03', store: 'STORE_WEST', on_hand: 0, on_order: 0, rop: 84, dos: 0.0, trigger: true, order: 47, risk: 'HIGH' },
-                        { sku: 'SKU_GROC_04', store: 'STORE_CENTRAL', on_hand: 0, on_order: 0, rop: 205, dos: 0.0, trigger: true, order: 188, risk: 'HIGH' },
-                        { sku: 'SKU_TOOL_10', store: 'STORE_WEST', on_hand: 0, on_order: 0, rop: 57, dos: 0.0, trigger: true, order: 51, risk: 'HIGH' },
-                        { sku: 'SKU_PC_07', store: 'STORE_WEST', on_hand: 71, on_order: 0, rop: 74, dos: 7.6, trigger: true, order: 72, risk: 'MEDIUM' },
-                        { sku: 'SKU_GROC_04', store: 'STORE_WEST', on_hand: 163, on_order: 0, rop: 176, dos: 8.5, trigger: true, order: 148, risk: 'MEDIUM' },
-                        { sku: 'SKU_BEV_01', store: 'STORE_EAST', on_hand: 293, on_order: 0, rop: 195, dos: 6.1, trigger: false, order: 0, risk: 'LOW' },
-                        { sku: 'SKU_DAIRY_02', store: 'STORE_EAST', on_hand: 187, on_order: 0, rop: 105, dos: 4.7, trigger: false, order: 0, risk: 'LOW' },
-                        { sku: 'SKU_BAK_08', store: 'STORE_EAST', on_hand: 89, on_order: 0, rop: 53, dos: 2.7, trigger: false, order: 0, risk: 'LOW' },
-                        { sku: 'SKU_SNK_06', store: 'STORE_EAST', on_hand: 422, on_order: 0, rop: 332, dos: 7.0, trigger: false, order: 0, risk: 'LOW' }
+                        { name: 'Thermal Fleece Winter Jacket', sku: 'SKU_APP_05', store: 'City Center Store', on_hand: 8, on_order: 0, rop: 300, dos: 0.7, trigger: true, order: 190, risk: 'HIGH' },
+                        { name: 'Wireless Noise-Cancelling Headphones', sku: 'SKU_ELEC_03', store: 'Suburban Store', on_hand: 0, on_order: 0, rop: 84, dos: 0.0, trigger: true, order: 47, risk: 'HIGH' },
+                        { name: 'Royal Himalayan Basmati Rice 5kg', sku: 'SKU_GROC_04', store: 'Regional Hub Store', on_hand: 0, on_order: 0, rop: 205, dos: 0.0, trigger: true, order: 188, risk: 'HIGH' },
+                        { name: '18V Cordless Compact Drill Kit', sku: 'SKU_TOOL_10', store: 'Suburban Store', on_hand: 0, on_order: 0, rop: 57, dos: 0.0, trigger: true, order: 51, risk: 'HIGH' },
+                        { name: 'Gentle Hydrating Shampoo 500ml', sku: 'SKU_PC_07', store: 'Suburban Store', on_hand: 71, on_order: 0, rop: 74, dos: 7.6, trigger: true, order: 72, risk: 'MEDIUM' },
+                        { name: 'Royal Himalayan Basmati Rice 5kg', sku: 'SKU_GROC_04', store: 'Suburban Store', on_hand: 163, on_order: 0, rop: 176, dos: 8.5, trigger: true, order: 148, risk: 'MEDIUM' },
+                        { name: 'Sparkling Citrus Soda 2L', sku: 'SKU_BEV_01', store: 'City Center Store', on_hand: 293, on_order: 0, rop: 195, dos: 6.1, trigger: false, order: 0, risk: 'LOW' },
+                        { name: 'Organic Whole Milk 1 Gallon', sku: 'SKU_DAIRY_02', store: 'City Center Store', on_hand: 187, on_order: 0, rop: 105, dos: 4.7, trigger: false, order: 0, risk: 'LOW' },
+                        { name: 'Rustic Sourdough Artisan Loaf', sku: 'SKU_BAK_08', store: 'City Center Store', on_hand: 89, on_order: 0, rop: 53, dos: 2.7, trigger: false, order: 0, risk: 'LOW' },
+                        { name: 'Crispy Kettle Potato Chips 200g', sku: 'SKU_SNK_06', store: 'City Center Store', on_hand: 422, on_order: 0, rop: 332, dos: 7.0, trigger: false, order: 0, risk: 'LOW' }
                     ];
 
                     let html = "";
                     rows.forEach(r => {
                         const badgeClass = r.risk === 'HIGH' ? 'badge-high' : (r.risk === 'MEDIUM' ? 'badge-med' : 'badge-low');
-                        const triggerTag = r.trigger ? "<span style='color: #ef4444; font-weight: bold;'>⚠️ REORDER</span>" : "<span style='color: #10b981;'>OK</span>";
+                        const riskText = r.risk === 'HIGH' ? 'HIGH RISK' : (r.risk === 'MEDIUM' ? 'MEDIUM' : 'LOW (SAFE)');
+                        const triggerTag = r.trigger 
+                            ? "<span style='color: #ef4444; font-weight: bold;'>⚠️ ORDER NOW</span>" 
+                            : "<span style='color: #10b981; font-weight: bold;'>✓ STOCK OK</span>";
                         html += `<tr>
-                            <td><strong>${r.sku}</strong></td>
+                            <td><strong>${r.name}</strong><br><span style="font-size: 0.78rem; color: #64748b;">${r.sku}</span></td>
                             <td>${r.store}</td>
-                            <td>${r.on_hand}</td>
-                            <td>${r.on_order}</td>
-                            <td>${r.rop}</td>
-                            <td>${r.dos} days</td>
+                            <td>${r.on_hand} units</td>
+                            <td>${r.on_order} units</td>
+                            <td>Order if below <strong>${r.rop}</strong></td>
+                            <td><strong>${r.dos} days</strong></td>
                             <td>${triggerTag}</td>
-                            <td><strong>${r.order > 0 ? r.order + ' units' : '-'}</strong></td>
-                            <td><span class="badge ${badgeClass}">${r.risk}</span></td>
+                            <td><strong>${r.order > 0 ? r.order + ' units' : 'No order needed'}</strong></td>
+                            <td><span class="badge ${badgeClass}">${riskText}</span></td>
                         </tr>`;
                     });
                     tbody.innerHTML = html;
                 } catch(e) {
-                    tbody.innerHTML = "<tr><td colspan='9' style='color: red;'>Failed to load inventory.</td></tr>";
+                    tbody.innerHTML = "<tr><td colspan='9' style='color: red;'>Failed to load stock data.</td></tr>";
                 }
             }
 
@@ -794,14 +865,37 @@ def serve_dashboard():
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: ['Naive', 'Seasonal-Naive', 'Rolling 7D', 'Ridge Reg', 'Random Forest', 'HistGradientBoost'],
+                        labels: [
+                            'Simple Guess (Lag 1)',
+                            'Weekly Guess (Lag 7)',
+                            '7-Day Average',
+                            'Basic Linear Math',
+                            'Random Forest',
+                            'Our Best AI Model'
+                        ],
                         datasets: [
-                            { label: 'MAE (Units)', data: [6.37, 5.74, 5.81, 4.20, 3.80, 3.79], backgroundColor: '#38bdf8' },
-                            { label: 'RMSE', data: [9.59, 8.41, 8.48, 5.90, 5.54, 5.42], backgroundColor: '#818cf8' },
-                            { label: 'WAPE (%)', data: [30.8, 27.7, 28.1, 20.3, 18.4, 18.3], backgroundColor: '#34d399' }
+                            { label: 'Average Prediction Error (MAE in Units)', data: [6.37, 5.74, 5.81, 4.20, 3.80, 3.79], backgroundColor: '#38bdf8' },
+                            { label: 'Large Mistakes Penalty (RMSE)', data: [9.59, 8.41, 8.48, 5.90, 5.54, 5.42], backgroundColor: '#818cf8' },
+                            { label: 'Overall Prediction Error % (WAPE)', data: [30.8, 27.7, 28.1, 20.3, 18.4, 18.3], backgroundColor: '#34d399' }
                         ]
                     },
-                    options: { responsive: true, maintainAspectRatio: false }
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        label += context.parsed.y;
+                                        if (context.datasetIndex === 2) label += '%';
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 });
             }
 

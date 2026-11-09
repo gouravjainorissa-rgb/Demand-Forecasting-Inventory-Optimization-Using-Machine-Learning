@@ -5,7 +5,11 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
 [![Scikit-Learn](https://img.shields.io/badge/scikit--learn-1.3+-F7931E.svg)](https://scikit-learn.org/)
 [![Tests](https://img.shields.io/badge/pytest-15%20passed-brightgreen.svg)]()
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46E3B7.svg)](https://demand-forecasting-inventory-tv55.onrender.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> 🚀 **Live Interactive Web Application**: [https://demand-forecasting-inventory-tv55.onrender.com/](https://demand-forecasting-inventory-tv55.onrender.com/)  
+> 📖 **Interactive Swagger API Documentation**: [https://demand-forecasting-inventory-tv55.onrender.com/docs](https://demand-forecasting-inventory-tv55.onrender.com/docs)
 
 ---
 
