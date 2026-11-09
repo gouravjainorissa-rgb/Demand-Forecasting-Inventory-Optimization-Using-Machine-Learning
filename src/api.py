@@ -302,6 +302,7 @@ def serve_dashboard():
             <h2>📦 Demand & Replenish</h2>
             <div class="nav-item active" onclick="switchPage('overview')">📊 Demand Overview</div>
             <div class="nav-item" onclick="switchPage('forecast')">📈 Product Forecasts</div>
+            <div class="nav-item" onclick="switchPage('simulator')">🔮 Custom What-If Simulator</div>
             <div class="nav-item" onclick="switchPage('inventory')">⚠️ Inventory & ROP Risk</div>
             <div class="nav-item" onclick="switchPage('performance')">🎯 Model Performance</div>
             <div style="margin-top: auto; padding: 10px; font-size: 0.75rem; color: #64748b;">
@@ -395,7 +396,110 @@ def serve_dashboard():
                 </div>
             </div>
 
-            <!-- Page 3: Inventory Risk -->
+            <!-- Page 3: Custom What-If Simulator -->
+            <div id="page-simulator" class="page-section">
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 style="margin-bottom: 6px;">🔮 Live What-If Prediction & Replenishment Simulator</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+                        Input custom operational values below to simulate forward customer demand and evaluate real-time stockout risk & order requirements.
+                    </p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Select Product SKU:</label>
+                            <select id="simSku" style="width: 100%;">
+                                <option value="SKU_BEV_01">SKU_BEV_01 - Sparkling Citrus Soda 2L</option>
+                                <option value="SKU_DAIRY_02">SKU_DAIRY_02 - Organic Whole Milk 1 Gallon</option>
+                                <option value="SKU_ELEC_03">SKU_ELEC_03 - Wireless Headphones</option>
+                                <option value="SKU_GROC_04">SKU_GROC_04 - Basmati Rice 5kg</option>
+                                <option value="SKU_APP_05">SKU_APP_05 - Thermal Fleece Jacket</option>
+                                <option value="SKU_SNK_06">SKU_SNK_06 - Crispy Kettle Chips</option>
+                                <option value="SKU_PC_07">SKU_PC_07 - Gentle Hydrating Shampoo</option>
+                                <option value="SKU_BAK_08">SKU_BAK_08 - Sourdough Artisan Loaf</option>
+                                <option value="SKU_HOME_09">SKU_HOME_09 - Stainless Fry Pan</option>
+                                <option value="SKU_TOOL_10">SKU_TOOL_10 - Cordless Drill Kit</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Store Location:</label>
+                            <select id="simStore" style="width: 100%;">
+                                <option value="STORE_EAST">STORE_EAST (Urban Metro)</option>
+                                <option value="STORE_WEST">STORE_WEST (Suburban)</option>
+                                <option value="STORE_CENTRAL">STORE_CENTRAL (Regional Hub)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Forecast Horizon (Days):</label>
+                            <input id="simHorizon" type="number" min="1" max="90" value="14" style="width: 100%;">
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Current Stock On-Hand (Units):</label>
+                            <input id="simOnHand" type="number" min="0" value="12" style="width: 100%;">
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Units On-Order / In-Transit:</label>
+                            <input id="simOnOrder" type="number" min="0" value="0" style="width: 100%;">
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Target Service Level:</label>
+                            <select id="simServiceLevel" style="width: 100%;">
+                                <option value="0.95">95% Service Level (Z = 1.645 - Standard)</option>
+                                <option value="0.90">90% Service Level (Z = 1.282)</option>
+                                <option value="0.98">98% Service Level (Z = 2.054 - High Availability)</option>
+                                <option value="0.99">99% Service Level (Z = 2.326 - Critical Stock)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" style="padding: 12px 24px; font-size: 1rem; border-radius: 8px;" onclick="runCustomSimulation()">
+                        ⚡ Run Live Machine Learning Forecast & Replenishment
+                    </button>
+                </div>
+
+                <!-- Simulation Output Area -->
+                <div id="simResultsCard" class="card" style="display: none; margin-bottom: 24px;">
+                    <h3 style="margin-bottom: 16px;">Simulation Results: <span id="simResultSkuName" style="color: var(--primary-light);"></span></h3>
+                    
+                    <div class="kpi-grid">
+                        <div class="card" style="background: #f8fafc;">
+                            <div class="kpi-label">Forecast Daily Demand</div>
+                            <div class="kpi-value" id="simDailyDemand">-</div>
+                            <div class="kpi-sub" id="simTotalDemand">-</div>
+                        </div>
+
+                        <div class="card" style="background: #f8fafc;">
+                            <div class="kpi-label">Safety Stock Buffer</div>
+                            <div class="kpi-value" id="simSafetyStock">-</div>
+                            <div class="kpi-sub" id="simLeadTimeDemand">-</div>
+                        </div>
+
+                        <div class="card" style="background: #f8fafc;">
+                            <div class="kpi-label">Reorder Point (ROP)</div>
+                            <div class="kpi-value" id="simROP">-</div>
+                            <div class="kpi-sub" id="simOrderStatus">-</div>
+                        </div>
+
+                        <div class="card" style="background: #f8fafc;">
+                            <div class="kpi-label">Recommended Order</div>
+                            <div class="kpi-value" id="simOrderQty" style="color: #0d9488;">-</div>
+                            <div class="kpi-sub" id="simRiskBadge">-</div>
+                        </div>
+                    </div>
+
+                    <div id="simAdviceBox" style="padding: 14px; border-radius: 8px; margin-top: 14px; font-size: 0.95rem;"></div>
+
+                    <div class="chart-container" style="margin-top: 20px;">
+                        <canvas id="simChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 4: Inventory Risk -->
             <div id="page-inventory" class="page-section">
                 <div class="card" style="margin-bottom: 24px;">
                     <h3 style="margin-bottom: 8px;">Automated Replenishment & Stockout Risk Table</h3>
@@ -473,6 +577,7 @@ def serve_dashboard():
                 const titles = {
                     'overview': 'Executive Demand Overview',
                     'forecast': 'Product Demand Trajectories & Forecast Explorer',
+                    'simulator': '🔮 Interactive What-If Demand & Replenishment Simulator',
                     'inventory': 'Inventory Optimization & Replenishment Risk Matrix',
                     'performance': 'Model Performance & Baseline Benchmarking'
                 };
@@ -480,8 +585,107 @@ def serve_dashboard():
                 
                 if (pageId === 'overview') renderOverviewChart();
                 if (pageId === 'forecast') updateForecastChart();
+                if (pageId === 'simulator' && !currentSimChart) runCustomSimulation();
                 if (pageId === 'inventory') renderInventoryTable();
                 if (pageId === 'performance') renderPerformanceChart();
+            }
+
+            let currentSimChart = null;
+
+            async function runCustomSimulation() {
+                const sku = document.getElementById('simSku').value;
+                const store = document.getElementById('simStore').value;
+                const horizon = parseInt(document.getElementById('simHorizon').value) || 14;
+                const onHand = parseInt(document.getElementById('simOnHand').value) || 0;
+                const onOrder = parseInt(document.getElementById('simOnOrder').value) || 0;
+                const sLevel = parseFloat(document.getElementById('simServiceLevel').value) || 0.95;
+
+                try {
+                    // Call Forecast endpoint
+                    const fcRes = await fetch('/forecast', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ product_id: sku, store_id: store, horizon_days: horizon })
+                    });
+                    const fcData = await fcRes.json();
+
+                    // Call Replenishment endpoint
+                    const repRes = await fetch('/inventory/recommendation', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            product_id: sku,
+                            store_id: store,
+                            current_on_hand: onHand,
+                            on_order_units: onOrder,
+                            service_level: sLevel,
+                            review_period_days: 7
+                        })
+                    });
+                    const repData = await repRes.json();
+
+                    // Display results card
+                    document.getElementById('simResultsCard').style.display = 'block';
+                    document.getElementById('simResultSkuName').innerText = repData.product_name + ' (' + sku + ' @ ' + store + ')';
+                    document.getElementById('simDailyDemand').innerText = repData.daily_forecast_demand + ' units/day';
+                    document.getElementById('simTotalDemand').innerText = 'Total ' + horizon + 'd: ' + fcData.total_forecast_demand + ' units';
+
+                    document.getElementById('simSafetyStock').innerText = repData.safety_stock + ' units';
+                    document.getElementById('simLeadTimeDemand').innerText = 'Lead-Time Demand: ' + repData.lead_time_demand + ' units (' + repData.lead_time_days + 'd lead)';
+
+                    document.getElementById('simROP').innerText = repData.reorder_point + ' units';
+                    const orderStatusEl = document.getElementById('simOrderStatus');
+                    if (repData.trigger_order) {
+                        orderStatusEl.innerHTML = "<span style='color: #ef4444; font-weight: bold;'>⚠️ REORDER TRIGGERED (Stock <= ROP)</span>";
+                    } else {
+                        orderStatusEl.innerHTML = "<span style='color: #10b981; font-weight: bold;'>✓ STOCK SUFFICIENT (Stock > ROP)</span>";
+                    }
+
+                    document.getElementById('simOrderQty').innerText = repData.suggested_order_qty > 0 
+                        ? repData.suggested_order_qty + ' units (' + repData.suggested_packs + ' packs)' 
+                        : '0 units (No order needed)';
+
+                    const riskBadge = repData.stockout_risk_level === 'HIGH' ? 'badge-high' : (repData.stockout_risk_level === 'MEDIUM' ? 'badge-med' : 'badge-low');
+                    document.getElementById('simRiskBadge').innerHTML = "<span class='badge " + riskBadge + "'>" + repData.stockout_risk_level + " RISK (" + repData.days_of_supply + " Days of Supply)</span>";
+
+                    const adviceBox = document.getElementById('simAdviceBox');
+                    if (repData.stockout_risk_level === 'HIGH') {
+                        adviceBox.style.background = '#fee2e2';
+                        adviceBox.style.color = '#991b1b';
+                    } else if (repData.stockout_risk_level === 'MEDIUM') {
+                        adviceBox.style.background = '#fef3c7';
+                        adviceBox.style.color = '#92400e';
+                    } else {
+                        adviceBox.style.background = '#d1fae5';
+                        adviceBox.style.color = '#065f46';
+                    }
+                    adviceBox.innerText = repData.stockout_risk_description;
+
+                    // Plot Forecast Chart
+                    const labels = fcData.daily_forecasts.map(d => d.date + ' (' + d.day_name.slice(0,3) + ')');
+                    const pred = fcData.daily_forecasts.map(d => d.forecast_demand);
+                    const lower = fcData.daily_forecasts.map(d => d.lower_bound_95);
+                    const upper = fcData.daily_forecasts.map(d => d.upper_bound_95);
+
+                    const ctx = document.getElementById('simChart').getContext('2d');
+                    if (currentSimChart) currentSimChart.destroy();
+
+                    currentSimChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { label: 'Simulated AI Demand Forecast', data: pred, borderColor: '#0d9488', backgroundColor: '#0d9488', tension: 0.2, pointRadius: 4 },
+                                { label: 'Upper 95% Confidence Bound', data: upper, borderColor: '#5eead4', borderDash: [3, 3], pointRadius: 0, fill: '+1', backgroundColor: 'rgba(204, 251, 241, 0.4)' },
+                                { label: 'Lower 95% Confidence Bound', data: lower, borderColor: '#5eead4', borderDash: [3, 3], pointRadius: 0, fill: false }
+                            ]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+
+                } catch(e) {
+                    console.error("Simulation error", e);
+                }
             }
 
             function renderOverviewChart() {
